@@ -3,6 +3,7 @@ uvicorn[standard]>=0.30
 jinja2>=3.1
 python-dotenv>=1.0
 google-genai>=1.0
+mangum>=0.19  # Vercel serverless adapter
 
 # --- Optional: local explanation model (LaMini-Flan-T5-783M) ---
 # Uncomment to enable fully-local concept explanations (needs ~3GB download + torch).

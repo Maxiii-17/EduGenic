@@ -71,3 +71,14 @@ Explain feature, as in the original project spec. Without it, explanations use G
 ## API docs
 
 With the server running: **http://127.0.0.1:8000/docs** (auto-generated Swagger UI).
+
+## Deploy on Vercel
+
+1. Go to **vercel.com → Add New… → Project → Import** the `EduGenic` repo.
+2. In **Environment Variables**, add `GEMINI_API_KEY` (your key) and optionally
+   `GEMINI_MODEL` (default `gemini-3.6-flash`).
+3. Deploy — Vercel uses `vercel.json` + `api/index.py` (FastAPI via Mangum).
+
+> Notes: Netlify can't host this (static-only, no Python backend). On Vercel's free
+> tier requests time out after ~60s, so Q&A/Quiz/Summary are fine but the long
+> Learning-Path call may occasionally need a retry.
