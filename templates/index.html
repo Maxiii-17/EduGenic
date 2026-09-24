@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>EduGenie — AI Learning Assistant</title>
+<link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+<div class="container">
+  <h1>Welcome to EduGenie </h1>
+  <p class="subtitle">Your personal AI tutor for learning support!</p>
+
+  <!-- Q&A -->
+  <section class="card">
+    <form id="qaForm">
+      <label><strong>Ask EduGenie a Question:</strong></label><br><br>
+      <div class="row">
+        <input type="text" id="question" placeholder="Why is the sky blue?" required>
+        <button type="submit">Get Answer</button>
+      </div>
+    </form>
+    <div id="qaResult" class="output"></div>
+  </section>
+
+  <!-- Explanation -->
+  <section class="card">
+    <form id="explainForm">
+      <label><strong>Need an Explanation?</strong></label><br><br>
+      <div class="row">
+        <input type="text" id="topic" placeholder="Photosynthesis" required>
+        <button type="submit">Explain</button>
+      </div>
+    </form>
+    <div id="explanationResult" class="output"></div>
+  </section>
+
+  <!-- Summary -->
+  <section class="card">
+    <form id="summaryForm">
+      <label><strong>Summarize a Paragraph:</strong></label><br><br>
+      <div class="row">
+        <input type="text" id="summaryText" placeholder="Paste long content to summarize" required>
+        <button type="submit">Summarize</button>
+      </div>
+    </form>
+    <div id="summaryResult" class="output"></div>
+  </section>
+
+  <!-- Quiz -->
+  <section class="card">
+    <form id="quizForm">
+      <label><strong>Generate a Quiz:</strong></label><br><br>
+      <div class="row">
+        <input type="text" id="quizText" placeholder="Solar System" required>
+        <button type="submit">Generate Quiz</button>
+      </div>
+    </form>
+    <div id="quizResult" class="output"></div>
+  </section>
+
+  <!-- Learning recommendations -->
+  <section class="card">
+    <form id="learnForm">
+      <label><strong>Get Learning Recommendations:</strong></label><br><br>
+      <div class="row column">
+        <input type="text" id="learnTopic" placeholder="e.g. Linear Regression" required>
+        <button type="submit">Get Recommendations</button>
+      </div>
+    </form>
+    <div id="learnResult" class="output"></div>
+  </section>
+</div>
+
+<script>
+async function postJSON(url, body) {
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify(body)
+  });
+  return res.json();
+}
+const esc = (s) => String(s ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+
+// --- Q&A ---
+document.getElementById("qaForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const q = document.getElementById("question").value.trim();
+  const out = document.getElementById("qaResult");
+  if (!q) return;
+  out.innerHTML = "<em>Thinking…</em>";
+  try {
+    const res = await fetch(`/qa?question=${encodeURIComponent(q)}`);
+    const data = await res.json();
+    out.innerHTML = `<strong>Answer:</strong><pre>${esc(data.answer || data.error)}</pre>`;
+  } catch (err) { out.innerHTML = `<span class="err">Request failed: ${esc(err)}</span>`; }
+});
+
+// --- Explanation ---
+document.getElementById("explainForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const topic = document.getElementById("topic").value.trim();
+  const out = document.getElementById("explanationResult");
+  out.innerHTML = "<em>Explaining…</em>";
+  try {
+    const data = await postJSON("/explain/", {topic});
+    out.innerHTML = `<strong>Explanation:</strong><pre>${esc(data.explanation || data.error)}</pre>`;
+  } catch (err) { out.innerHTML = `<span class="err">Request failed: ${esc(err)}</span>`; }
+});
+
+// --- Summary ---
+document.getElementById("summaryForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const text = document.getElementById("summaryText").value.trim();
+  const out = document.getElementById("summaryResult");
+  out.innerHTML = "<em>Summarizing…</em>";
+  try {
+    const data = await postJSON("/summarize/", {text});
+    out.innerHTML = `<strong>Summary:</strong><pre>${esc(data.summary || data.error)}</pre>`;
+  } catch (err) { out.innerHTML = `<span class="err">Request failed: ${esc(err)}</span>`; }
+});
+
+// --- Quiz ---
+document.getElementById("quizForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const text = document.getElementById("quizText").value.trim();
+  const out = document.getElementById("quizResult");
+  out.innerHTML = "<em>Generating quiz…</em>";
+  try {
+    const data = await postJSON("/quiz", {text});
+    renderQuiz(out, data.quiz);
+  } catch (err) { out.innerHTML = `<span class="err">Request failed: ${esc(err)}</span>`; }
+});
+
+function renderQuiz(out, quiz) {
+  if (!quiz) { out.innerHTML = "No quiz returned."; return; }
+  if (quiz.error) { out.innerHTML = `<span class="err">${esc(quiz.error)}</span>`; return; }
+  if (quiz.length && quiz[0].error) { out.innerHTML = `<span class="err">${esc(quiz[0].error)}</span>`; return; }
+  out.innerHTML = "<strong>Quiz:</strong>";
+  quiz.forEach((item, i) => {
+    const qid = `q${i}`;
+    const opts = (item.options || []).map((opt, j) => `
+      <label class="opt">
+        <input type="radio" name="${qid}" value="${esc(opt)}"> ${esc(opt)}
+      </label>`).join("");
+    const div = document.createElement("div");
+    div.className = "quiz-item";
+    div.innerHTML = `<p><strong>Q${i+1}: ${esc(item.question)}</strong></p>${opts}
+      <br><button data-check="${i}">Check Answer</button>
+      <span class="feedback" id="fb${i}"></span>`;
+    div.querySelector("button").addEventListener("click", () => {
+      const sel = div.querySelector(`input[name="${qid}"]:checked`);
+      const fb = div.querySelector(`#fb${i}`);
+      if (!sel) { fb.textContent = "Please select an option."; fb.className = "feedback"; return; }
+      if (sel.value === item.answer) { fb.textContent = "✅ Correct!"; fb.className = "feedback ok"; }
+      else { fb.textContent = `❌ Incorrect. Correct answer: ${item.answer}`; fb.className = "feedback bad"; }
+    });
+    out.appendChild(div);
+  });
+}
+
+// --- Learning path ---
+document.getElementById("learnForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const topic = document.getElementById("learnTopic").value.trim();
+  const out = document.getElementById("learnResult");
+  out.innerHTML = "<em>Building your learning path…</em>";
+  try {
+    const res = await fetch(`/learn/recommendations?topic=${encodeURIComponent(topic)}`);
+    const data = await res.json();
+    out.innerHTML = `<strong>Learning Recommendations for "${esc(data.topic)}":</strong><pre>${esc(data.recommendation)}</pre>`;
+  } catch (err) { out.innerHTML = `<span class="err">Request failed: ${esc(err)}</span>`; }
+});
+</script>
+</body>
+</html>
