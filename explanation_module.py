@@ -56,15 +56,15 @@ def explain_topic(topic: str) -> str:
             return _explain_local(topic)
         except Exception as e:  # noqa: BLE001
             print(f"Local explanation failed, falling back to Gemini: {e}")
-    # Fallback: dispatcher (Ollama local -> Gemini -> Pollinations)
+    # Fallback: Gemini (also used when torch/transformers not installed)
     try:
-        from ai_client import generate_text
+        from gemini_client import generate_gemini_text
 
         prompt = (
             f"Explain the concept of '{topic}' in a simple and clear way "
             f"for a school student. Keep it concise and easy to understand."
         )
-        text = generate_text(prompt)
+        text = generate_gemini_text(prompt)
         if _local_failed_reason:
             print(f"Note: local model unavailable ({_local_failed_reason}); used Gemini.")
         return text

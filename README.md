@@ -32,10 +32,7 @@ Then open **http://127.0.0.1:8000** (don't open `index.html` directly — CSS an
 ```
 EduGenie/
 ├── main.py                # FastAPI app + routes
-├── ai_client.py           # Provider dispatcher (ollama -> gemini -> pollinations)
-├── gemini_client.py       # Google Gemini (model fallback chain)
-├── ollama_client.py       # Local unlimited AI via Ollama
-├── pollinations_client.py # Keyless cloud fallback
+├── gemini_client.py       # Shared Gemini client (model fallback, friendly errors)
 ├── qna.py                 # Question answering
 ├── explanation_module.py  # Concept explanation (local model w/ Gemini fallback)
 ├── quiz_module.py         # Quiz generation (JSON output)
@@ -51,25 +48,16 @@ EduGenie/
 ## Configuration (`.env`)
 
 ```
-GEMINI_API_KEY=your_key_here   # optional if Ollama is running
+GEMINI_API_KEY=your_key_here
 GEMINI_MODEL=gemini-3.6-flash
-AI_PROVIDER=auto               # auto = ollama -> gemini -> pollinations
-OLLAMA_MODEL=qwen2.5:1.5b
 ```
 
-## AI providers (no key? no problem)
+The client automatically fails over across `gemini-3.6-flash → gemini-3.5-flash →
+gemini-flash-latest → gemini-3-flash-preview` on retired models (404), exhausted
+free-tier quota (429) or overload (503).
 
-| Provider | Key? | Quota? | Quality | Setup |
-|---|---|---|---|---|
-| 🦙 Ollama (local) | none, private | **unlimited** | good (1–3B models) | `winget install Ollama.Ollama`, then `ollama pull qwen2.5:1.5b` and keep `ollama serve` running |
-| ✨ Gemini | API key | ~20 req/day/model | best | key from https://aistudio.google.com/app/apikey |
-| 🌐 Pollinations | none | generous | basic | nothing — automatic last resort |
-
-`AI_PROVIDER=auto` (default) tries Ollama first, then Gemini (with model fallback
-`3.6-flash → 3.5-flash → flash-latest → 3-flash-preview` on 404/429/503), then
-Pollinations. Set `AI_PROVIDER=ollama` for fully private, unlimited, offline AI.
-
-> ⚠️ Never commit your real `.env` — it's already in `.gitignore`.
+> ⚠️ Never commit your real `.env` — it's already in `.gitignore`. The free tier
+> allows ~20 requests/day per model; quota errors reset daily.
 
 ## Optional: fully-local explanations
 

@@ -1,8 +1,8 @@
-"""Quiz Module — generates 3 MCQs (4 options each) as JSON via dispatcher."""
+"""Quiz Module — generates 3 MCQs (4 options each) as JSON via Gemini."""
 import json
 import re
 
-from ai_client import generate_text
+from gemini_client import generate_gemini_text
 
 
 def clean_json_block(text: str) -> str:
@@ -32,7 +32,7 @@ Return ONLY the JSON array, no other text.
 Passage:
 {text}
 '''
-        quiz_text = generate_text(prompt)
+        quiz_text = generate_gemini_text(prompt)
         cleaned_text = clean_json_block(quiz_text)
         parsed = json.loads(cleaned_text)
         if not isinstance(parsed, list):
